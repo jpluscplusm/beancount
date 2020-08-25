@@ -123,6 +123,7 @@ class Importer(identifier.IdentifyMixin, filing.FilingMixin):
                  narration_sep: str = '; ',
                  encoding: Optional[str] = None,
                  invert_sign: Optional[bool] = False,
+                 has_header: Optional[bool] = None,
                  **kwds):
         """Constructor.
 
@@ -160,6 +161,7 @@ class Importer(identifier.IdentifyMixin, filing.FilingMixin):
         self.narration_sep = narration_sep
         self.encoding = encoding
         self.invert_sign = invert_sign
+        self.has_header = has_header
 
         self.categorizer = categorizer
 
@@ -188,6 +190,7 @@ class Importer(identifier.IdentifyMixin, filing.FilingMixin):
             file.head(encoding=self.encoding),
             self.csv_dialect,
             self.skip_lines,
+            self.has_header,
         )
         if Col.DATE in iconfig:
             reader = iter(csv.reader(open(file.name, encoding=self.encoding),
@@ -218,6 +221,7 @@ class Importer(identifier.IdentifyMixin, filing.FilingMixin):
             file.head(encoding=self.encoding),
             self.csv_dialect,
             self.skip_lines,
+            self.has_header,
         )
 
         reader = iter(csv.reader(open(file.name, encoding=self.encoding),
@@ -372,7 +376,7 @@ class Importer(identifier.IdentifyMixin, filing.FilingMixin):
         return get_amounts(iconfig, row, allow_zero_amounts, parse_amount)
 
 
-def normalize_config(config, head, dialect='excel', skip_lines: int = 0):
+def normalize_config(config, head, dialect='excel', skip_lines: int = 0, has_header = None):
     """Using the header line, convert the configuration field name lookups to int indexes.
 
     Args:
@@ -394,7 +398,11 @@ def normalize_config(config, head, dialect='excel', skip_lines: int = 0):
     for _ in range(skip_lines):
         head = head[head.find('\n')+1:]
 
-    has_header = csv.Sniffer().has_header(head)
+    if has_header is None:
+        has_header = csv.Sniffer().has_header(head)
+    else:
+        assert isinstance(has_header, bool)
+
     if has_header:
         header = next(csv.reader(io.StringIO(head), dialect=dialect))
         field_map = {field_name.strip(): index
